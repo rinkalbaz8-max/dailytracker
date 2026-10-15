@@ -1,0 +1,8 @@
+{
+  "name": "glowquest-vercel-sync",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@vercel/blob": "^2.6.1"
+  }
+}
