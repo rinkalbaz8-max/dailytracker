@@ -1,0 +1,49 @@
+GLOWQUEST — BECOMING RINKAL
+
+1. Extract the ZIP into a permanent folder, such as Documents/GlowQuest.
+2. Double-click GlowQuest.html. Use Chrome or Edge for the best experience.
+3. No VS Code, installation, account, terminal or server is needed.
+4. Use Daily studio to log results, Learning lab for practice and revision,
+   Levels & rewards for rewards, and Letters to me for your journal.
+5. Every change autosaves in this browser. Keep the same file location and
+   browser profile. Private browsing and clearing browser data can remove it.
+6. In Make it mine, connect an auto-backup JSON file. Reconnect after each
+   reopening. Alternatively click Backup regularly and keep the downloaded JSON.
+7. To move computers or browser profiles: download a backup, copy the HTML,
+   open it in the new browser, and use Restore backup. Never edit the JSON manually.
+8. Video recording, when supported, needs camera/microphone permission. Download
+   each take separately before navigating away. If unsupported, use your phone
+   or Windows Camera and record completion in the dashboard. Post clips yourself.
+9. Plan: 15 Oct 2026 through 13 Jan 2027. Seven levels total 91 days. Day 91 is
+   the finale. Change the start date only if you intend to shift all day numbers.
+10. Core reward rule: every elapsed day through the level must meet 100% of
+    required missions. You can explicitly choose 90% or 80% in Settings.
+    Busy mode does not mark missing work complete. Weight and salary do not gate prizes.
+11. The DSA bank now matches the exact 179-problem Striver list you supplied.
+    Topics, patterns, difficulty and order are preserved. Each scheduled problem
+    includes its own concept explanation, dry run and learning checks.
+    Existing problem records migrate by matching problem identity. The previous
+    records remain in backups and can be downloaded from the Learning lab.
+    Before replacing the old HTML in the same folder, download a JSON backup.
+    Use the same filename and browser; restore the backup if needed.
+12. Gita means a 14-hour recording split into daily listening, default 10 minutes.
+13. Health: 60 kg is a longer-term aspiration, not a promised 91-day result.
+    Eat regular nourishing meals, respond to hunger and adjust activity for illness
+    or pain. The app does not prescribe a calorie deficit or guarantee an offer.
+14. Everything in the app works offline except links to external learning resources.
+    It has no background notifications, cloud sync, AI scoring, automatic step
+    measurement, automatic social posting or food recognition.
+
+Your evidence, kept gently. Your next chapter, built deliberately.
+
+
+VERIFICATION
+Date arithmetic, reward gating, future-day behavior, curriculum coverage,
+JSON validation, schedule overlaps, rendering functions and revision logic
+were checked programmatically. Browser layout and camera/file-picker behavior
+could not be exercised in a live browser here; those depend on your browser.
+
+SOURCES
+https://www.cdc.gov/healthy-weight-growth/losing-weight/
+https://www.cdc.gov/healthy-weight-growth/physical-activity/index.html
+https://takeuforward.org/interviews/strivers-sde-sheet-top-coding-interview-problems/
