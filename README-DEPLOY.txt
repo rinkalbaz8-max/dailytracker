@@ -43,3 +43,31 @@ SECURITY
 - The browser never receives Vercel Blob credentials.
 - The sync PIN is checked only by the Vercel server function.
 - The browser stores your PIN locally on each device so it can sync automatically.
+
+TROUBLESHOOTING / API FIX
+-------------------------
+This build uses Vercel's Web-standard `fetch` function export in api/sync.js.
+After redeploying, opening https://YOUR-DOMAIN.vercel.app/api/sync directly
+should return {"error":"Unauthorized"}. That is expected because a normal
+browser tab does not send the private sync PIN header.
+
+If it returns 500, open Vercel -> Project -> Logs and inspect /api/sync.
+
+GITA TRACKER (NEW)
+------------------
+- Open "Gita tracker" from the sidebar (on a phone, swipe the top menu).
+- Start the listening timer, pause/resume, and click Save session to log it.
+- Or select today/past date and add minutes manually with an optional note.
+- The history has editable, removable sessions and progress toward 840 minutes.
+- Earlier daily Gita minutes are preserved as imported listening sessions.
+- The timer records elapsed time, not YouTube playback.
+- Unsaved timer sessions stay in this browser on refresh; they do not cloud sync
+  until saved. Saved sessions sync in the same state JSON as other entries.
+
+BEFORE DEPLOYING THIS UPDATE
+----------------------------
+On the laptop that has your existing progress, open your current deployed app
+and use Backup > Download backup. Keep this file safe. Do not clear Chrome
+site data. Replace the files in the GitHub repository root (NOT an extra
+nested folder), then push to trigger a Vercel deployment. Keep the same domain
+to preserve localStorage. Your existing private Blob store/PIN can be reused.
