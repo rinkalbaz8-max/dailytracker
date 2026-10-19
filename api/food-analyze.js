@@ -1,4 +1,4 @@
-// Server-side OpenAI call: never put OPENAI_API_KEY inside index.html or GitHub.
+// Server-side Gemini call: keep GEMINI_API_KEY in Vercel Secret env vars, never in HTML or GitHub.
 // The user's existing GLOWQUEST_SYNC_PIN protects this endpoint from anonymous calls.
 import { timingSafeEqual } from 'node:crypto';
 
@@ -40,7 +40,7 @@ export default {
   async fetch(request) {
     if (!validPin(request)) return reply({ error: 'Connect with your private GlowQuest PIN first.' }, 401);
     if (request.method !== 'POST') return reply({ error: 'Use POST from Nutrition Studio.' }, 405);
-    if (!process.env.OPENAI_API_KEY) return reply({ error: 'OPENAI_API_KEY is missing in Vercel Environment Variables. Add it and redeploy.' }, 503);
+    if (!process.env.GEMINI_API_KEY) return reply({ error: 'GEMINI_API_KEY is missing in Vercel Environment Variables. Add it as a Secret and redeploy.' }, 503);
     let payload;
     try {
       if (Number(request.headers.get('content-length')) > 6000) return reply({ error: 'Meal description is too long.' }, 413);
@@ -51,39 +51,42 @@ export default {
     if (description.length < 4 || description.length > 700 || !['Breakfast', 'Lunch', 'Dinner', 'Snack & chai', 'Other'].includes(slot)) {
       return reply({ error: 'Describe a meal (4–700 characters) and choose a meal time.' }, 400);
     }
-    const target = finiteBetween(payload?.target?.kcal, 500, 6000) ? Math.round(payload.target.kcal) : null;
-    const proteinGoal = finiteBetween(payload?.target?.protein, 0, 400) ? Math.round(payload.target.protein) : null;
-    const logged = finiteBetween(payload?.alreadyLogged, 0, 30000) ? Math.round(payload.alreadyLogged) : 0;
 
     try {
-      // Don't send stored tracker records, gender, age, or medical data to the model.
+      // Only the meal description and meal-time are sent to Gemini, NOT profile,
+      // calorie targets, food history, weight, age, gender, or other tracker data.
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 26000);
+      const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
       let response;
       try {
-        response = await fetch('https://api.openai.com/v1/responses', {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: 'POST', signal: controller.signal,
-          headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+          headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'gpt-4o-mini', store: false, max_output_tokens: 1600,
-            text: { format: { type: 'json_schema', name: 'glowquest_food_macros', strict: true, schema } },
-            input: [
-              { role: 'system', content: `You are a careful nutritional ESTIMATOR for a personal vegetarian meal diary, not a doctor or weight-loss coach. Infer approximate nutrition for the WHOLE meal as eaten. Return separate items with portions and kcal, protein g, carbs g, fat g, fiber g. Keep each item realistic; account for ghee/oil, milk/sugar in chai and Indian serving sizes. If a quantity, recipe, preparation, brand or cooking fat was not specified, make a transparent modest assumption and name it in assumptions. Do not claim precise calories: all estimates are uncertain. Do not invent measured weights. If the meal is genuinely unidentifiable, use low confidence, state what's missing and avoid false precision. Output items up to 10, assumptions up to 8; numerical values nonnegative. The user may have a daily kcal planning target but that MUST NOT bias food-calorie estimates.` },
-              { role: 'user', content: JSON.stringify({ meal: description, meal_time: slot, daily_kcal_planning_target: target, protein_guide_g: proteinGoal, calories_already_logged: logged }) },
-            ],
+            systemInstruction: { parts: [{ text: `You are a careful nutritional ESTIMATOR for a personal vegetarian meal diary, not a doctor or weight-loss coach. Infer approximate nutrition for the WHOLE meal as eaten. Return separate items with portions and kcal, protein g, carbs g, fat g, fiber g. Keep each item realistic; account for ghee/oil, milk/sugar in chai, and Indian serving sizes. If a quantity, recipe, preparation, brand, or cooking fat was not specified, make a transparent modest assumption and name it in assumptions. Never claim precise nutrition measurements. If the meal is unidentifiable, use low confidence and list missing details instead of false precision. Up to 10 foods and 8 assumptions, all nutrition amounts nonnegative. Estimate what the user actually described; do not adjust calories to fit a diet goal. Return JSON only.` }] },
+            contents: [{ role: 'user', parts: [{ text: JSON.stringify({ meal: description, meal_time: slot }) }] }],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 2048,
+              responseMimeType: 'application/json',
+              responseJsonSchema: schema,
+            },
           }),
         });
       } finally { clearTimeout(timeout); }
       if (!response.ok) {
-        // Never echo the full upstream response: it may contain implementation details.
-        if (response.status === 429) return reply({ error: 'AI rate limit or API budget reached. Try again later.' }, 429);
-        if (response.status === 401 || response.status === 403) return reply({ error: 'The server OpenAI API key was rejected. Check OPENAI_API_KEY in Vercel.' }, 503);
-        console.error('OpenAI food analyze status', response.status, (await response.text()).slice(0, 300));
-        return reply({ error: 'Food estimation failed at the AI provider. Check Vercel logs.' }, 502);
+        // Don't send upstream error text to the browser (could contain internal details).
+        if (response.status === 429) return reply({ error: 'Gemini free-tier rate limit reached. Wait a little and retry.' }, 429);
+        if (response.status === 401 || response.status === 403) return reply({ error: 'Gemini rejected your API key or access. Check GEMINI_API_KEY in Vercel.' }, 503);
+        if (response.status === 404) return reply({ error: `Gemini model ${model} is unavailable for this key. Check availability in Google AI Studio or set GEMINI_MODEL in Vercel.` }, 503);
+        console.error('Gemini food analyze HTTP status', response.status, (await response.text()).slice(0, 300));
+        return reply({ error: 'Gemini food estimation failed. Check Vercel function logs.' }, 502);
       }
       const raw = await response.json();
-      const text = (raw.output || []).flatMap(part => part.content || []).find(p => p.type === 'output_text')?.text;
-      if (!text) return reply({ error: 'No food estimate returned. Please try a clearer portion description.' }, 502);
+      const parts = raw?.candidates?.[0]?.content?.parts;
+      const text = Array.isArray(parts) ? parts.map(part => part?.text || '').join('').trim() : '';
+      if (!text) return reply({ error: 'Gemini returned no food estimate. Try a clearer meal description.' }, 502);
       const parsed = JSON.parse(text);
       if (!Array.isArray(parsed.items) || parsed.items.length < 1 || parsed.items.length > 10 ||
           !Array.isArray(parsed.assumptions) || parsed.assumptions.length > 8 ||
@@ -111,7 +114,7 @@ export default {
       });
       return reply({ title: parsed.title.slice(0, 200), confidence: parsed.confidence, items, assumptions, totals, isEstimate: true });
     } catch (error) {
-      console.error('GlowQuest AI food estimation error:', error);
+      console.error('GlowQuest Gemini food estimation error:', error);
       return reply({ error: error?.name === 'AbortError' ? 'AI request timed out. Try again.' : 'Food estimation unavailable. Try again or use the offline ingredient logger.' }, error?.name === 'AbortError' ? 504 : 502);
     }
   },
